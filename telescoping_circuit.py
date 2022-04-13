@@ -18,6 +18,10 @@ from dependency.torpy.circuit import random, TorCircuit, CircuitNode, NtorKeyAgr
 from dependency.torpy.documents.network_status import RouterFlags
 
 
+def my_log(base, arg):
+    if arg < base:
+        return 0
+    return 1 + my_log(arg/base, base)
 
 #
 # Helper functions
@@ -127,13 +131,14 @@ def extend(circuit, node_router):
     public_B = key_agreement._B._raw_public_bytes()  # Node's public "ntor onion" key, B
 
     # concatenation ID | B | X
-    onion_skin =  #your-code-here#
+    # not sure if it should be private or public x
+    onion_skin =  node_ID | public_B | public_X#your-code-here#
 
     # Build an EXTEND cell with the new node's info and our known keys
-    extend_cell =  #your-code-here#
+    extend_cell =  build_extend_cell(node_router, onion_skin)#your-code-here#
 
     # Send EXTEND cell to the next node and receive an EXTENDED cell back
-    extended_cell =  #your-code-here#
+    extended_cell = send_receive_cell_extend(extend_cell, circuit) #your-code-here#
 
     # Meanwhile, the server at the new node generates a keypair of y,Y = KEYGEN(), and uses its ntor
     # onion private key, b, to compute H(H(X^y|X^b|ID|B|X|Y, t_verify)|ID|B|Y|X)
@@ -145,10 +150,11 @@ def extend(circuit, node_router):
 
     public_Y = extended_cell.handshake_data[:32]  # Node's public key, Y
     auth_digest = extended_cell.handshake_data[32:]
-
-    shared_X__y =  #your-code-here#
-    shared_X__b =  #your-code-here#
-    secret_input =  #your-code-here#
+    # confused as to computing priavte y and private b
+    shared_X__y = raise_exponent(public_X, ) #your-code-here#
+    shared_X__b =  raise_exponent(public_X, )#your-code-here#
+    # not sure if protoid is right there (look at 5.1.4)
+    secret_input =  shared_X__y | shared_X__b | node_ID| public_B | public_X | public_Y | key_agreement.protoid#your-code-here#
 
     # Complete the remaining hashing, verification - for further reference, read section 5.1.4 and 5.2.2.
     shared_secret = node_extended.complete_handshake(secret_input, public_Y, auth_digest)
@@ -163,6 +169,8 @@ def circuit_build_hops(circuit, middle_router, exit_router):
     logger.info('Building 3 hops circuit...')
 
     #your-code-here#
+    extend(circuit,middle_router)
+    extend(circuit, exit_router)
 
     logger.debug('Circuit has been built')
 
@@ -181,18 +189,19 @@ def circuit_from_guard(guard_router, circuit_id):
     # Then, we need to send it to the first node in the circuit we are trying to create here.
     # Note that TOR_DIGEST_LEN = HASH_LEN = 20 bytes
 
-    x =  #your-code-here#
+    # create random digest of len 20 bytes
+    x = os.urandom(20)#your-code-here#
 
-    cell_create =  #your-code-here#
+    cell_create = build_create_cell(x,CIRCUIT_ID) #your-code-here#
 
-    cell_created =  #your-code-here#
+    cell_created =  send_receive_cell_create(cell_create,circuit, circuit_node)#your-code-here#
 
     # Extract the two parts from the received CREATED cell
     y = cell_created.handshake_data[:TOR_DIGEST_LEN]  # Key material (Y)
     key_hash = cell_created.handshake_data[TOR_DIGEST_LEN:]  # Derivative key data
 
     # Please reference 5.1.5 and 5.2.1 of the Tor protocol specification for how to compute K_0 before hashing.
-    k0 =  #your-code-here#
+    k0 =  y|x#your-code-here#
 
     k = kdf_tor(k0)
 
@@ -217,13 +226,13 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
 
     #your-code-here#
 
-    circuit_base =  #your-code-here#  # CREATE
+    circuit_base = circuit_from_guard(guard_address,CIRCUIT_ID)#your-code-here#  # CREATE
 
-    circuit =  #your-code-here#  # EXTEND
+    circuit = circuit_build_hops(circuit_base, middle_address, exit_address) #your-code-here#  # EXTEND
 
     # Use our established circuit to attach a TCP stream
     port = port or 80
-    stream =  #your-code-here#  # BEGIN
+    stream =  new_tcp_stream(circuit,hostname, port)#your-code-here#  # BEGIN
 
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
     request =  #your-code-here#
