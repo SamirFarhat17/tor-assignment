@@ -123,7 +123,8 @@ def extend(circuit, node_router):
            and calculate the shared keys.  The circuit is now extended.
     """
     logger.info('Extending the circuit #%x with %s...', circuit.id, node_router)
-
+    # not sure if need to use router from ip here or not
+    # router_from_ip(node_router, consensus)
     node_extended = CircuitNode(node_router, NtorKeyAgreement)
 
     key_agreement = node_extended.key_agreement  # See section 5.1.4 for full specification
@@ -135,10 +136,10 @@ def extend(circuit, node_router):
 
     # concatenation ID | B | X
     # not sure if it should be private or public x
-    onion_skin =  node_ID | public_B | public_X#your-code-here#
+    onion_skin = node_ID | public_B | public_X#your-code-here#
 
     # Build an EXTEND cell with the new node's info and our known keys
-    extend_cell =  build_extend_cell(node_router, onion_skin)#your-code-here#
+    extend_cell = build_extend_cell(node_router, onion_skin)#your-code-here#
 
     # Send EXTEND cell to the next node and receive an EXTENDED cell back
     extended_cell = send_receive_cell_extend(extend_cell, circuit) #your-code-here#
@@ -154,9 +155,9 @@ def extend(circuit, node_router):
     public_Y = extended_cell.handshake_data[:32]  # Node's public key, Y
     auth_digest = extended_cell.handshake_data[32:]
     shared_X__y = raise_exponent(public_Y, private_x) #your-code-here#
-    shared_X__b =  raise_exponent(public_B, private_x)#your-code-here#
+    shared_X__b = raise_exponent(public_B, private_x)#your-code-here#
     # not sure if protoid is right there (look at 5.1.4)
-    secret_input =  shared_X__y | shared_X__b | node_ID| public_B | public_X | public_Y | key_agreement.protoid#your-code-here#
+    secret_input = shared_X__y | shared_X__b | node_ID | public_B | public_X | public_Y | key_agreement.protoid#your-code-here#
 
     # Complete the remaining hashing, verification - for further reference, read section 5.1.4 and 5.2.2.
     shared_secret = node_extended.complete_handshake(secret_input, public_Y, auth_digest)
@@ -171,7 +172,7 @@ def circuit_build_hops(circuit, middle_router, exit_router):
     logger.info('Building 3 hops circuit...')
 
     #your-code-here#
-    extend(circuit,middle_router)
+    extend(circuit, middle_router)
     extend(circuit, exit_router)
 
     logger.debug('Circuit has been built')
@@ -194,9 +195,9 @@ def circuit_from_guard(guard_router, circuit_id):
     # create random digest of len 20 bytes
     x = random_bytes(20)#your-code-here#
 
-    cell_create = build_create_cell(x,CIRCUIT_ID) #your-code-here#
+    cell_create = build_create_cell(x, gen_circuit_id()) #your-code-here#
 
-    cell_created =  send_receive_cell_create(cell_create,circuit, circuit_node)#your-code-here#
+    cell_created = send_receive_cell_create(cell_create,circuit, circuit_node)#your-code-here#
 
     # Extract the two parts from the received CREATED cell
     y = cell_created.handshake_data[:TOR_DIGEST_LEN]  # Key material (Y)
@@ -222,19 +223,21 @@ def circuit_from_guard(guard_router, circuit_id):
 def get(hostname, port, path="", guard_address=None, middle_address=None, exit_address=None):
     tor = TorClient()
     consensus = tor.consensus
+    all_relays = get_all_relays(consensus)
+    all_exits = get_all_exits(consensus)
     # - Your code here - Pick nodes to form your circuit, an ID,
     # and establish a layered connection between them. This is
     # the Tor circuit that will be used to request a web page.
 
     #your-code-here#
 
-    circuit_base = circuit_from_guard(guard_address,CIRCUIT_ID)#your-code-here#  # CREATE
+    circuit_base = circuit_from_guard(guard_address, gen_circuit_id())#your-code-here#  # CREATE
 
     circuit = circuit_build_hops(circuit_base, middle_address, exit_address) #your-code-here#  # EXTEND
 
     # Use our established circuit to attach a TCP stream
     port = port or 80
-    stream =  new_tcp_stream(circuit,hostname, port)#your-code-here#  # BEGIN
+    stream = new_tcp_stream(circuit, hostname, port)#your-code-here#  # BEGIN
 
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
     request = hostname + ":" + str(port) + "/" + path #your-code-here#
