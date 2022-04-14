@@ -221,7 +221,7 @@ def circuit_from_guard(guard_router, circuit_id):
 # Initiates the construction of a circuit and then gets a web page through that circuit
 def get(hostname, port, path="", guard_address=None, middle_address=None, exit_address=None):
     tor = TorClient()
-
+    consensus = tor.consensus
     # - Your code here - Pick nodes to form your circuit, an ID,
     # and establish a layered connection between them. This is
     # the Tor circuit that will be used to request a web page.
