@@ -27,8 +27,11 @@ def my_log(base, arg):
 # Helper functions
 #
 
+
 # Generate a unique 4-byte id for a circuit
 CIRCUIT_ID = random.randrange(0, 0xFFFFFFFF)
+
+
 def gen_circuit_id():
     global CIRCUIT_ID
     CIRCUIT_ID = ((CIRCUIT_ID + 1) & 0xFFFFFFFF) | 0x80000000
@@ -150,9 +153,8 @@ def extend(circuit, node_router):
 
     public_Y = extended_cell.handshake_data[:32]  # Node's public key, Y
     auth_digest = extended_cell.handshake_data[32:]
-    # confused as to computing priavte y and private b
-    shared_X__y = raise_exponent(public_X, ) #your-code-here#
-    shared_X__b =  raise_exponent(public_X, )#your-code-here#
+    shared_X__y = raise_exponent(public_Y, private_x) #your-code-here#
+    shared_X__b =  raise_exponent(public_B, private_x)#your-code-here#
     # not sure if protoid is right there (look at 5.1.4)
     secret_input =  shared_X__y | shared_X__b | node_ID| public_B | public_X | public_Y | key_agreement.protoid#your-code-here#
 
@@ -190,7 +192,7 @@ def circuit_from_guard(guard_router, circuit_id):
     # Note that TOR_DIGEST_LEN = HASH_LEN = 20 bytes
 
     # create random digest of len 20 bytes
-    x = os.urandom(20)#your-code-here#
+    x = random_bytes(20)#your-code-here#
 
     cell_create = build_create_cell(x,CIRCUIT_ID) #your-code-here#
 
@@ -201,7 +203,7 @@ def circuit_from_guard(guard_router, circuit_id):
     key_hash = cell_created.handshake_data[TOR_DIGEST_LEN:]  # Derivative key data
 
     # Please reference 5.1.5 and 5.2.1 of the Tor protocol specification for how to compute K_0 before hashing.
-    k0 =  y|x#your-code-here#
+    k0 = x | y #your-code-here#
 
     k = kdf_tor(k0)
 
@@ -235,12 +237,13 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     stream =  new_tcp_stream(circuit,hostname, port)#your-code-here#  # BEGIN
 
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
-    request =  #your-code-here#
+    request = hostname + ":" + str(port) + "/" + path #your-code-here#
     logger.warning('Sending: %s %s:%s', request, hostname, port)
     #your-code-here#
+    stream.send(bytes(request))
 
     logger.debug('Reading...')
-    recv =  #your-code-here#
+    recv = stream.recv(1024) #your-code-here#
 
     return recv.decode('utf-8')
 
