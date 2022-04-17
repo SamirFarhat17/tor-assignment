@@ -23,10 +23,7 @@ def my_log(base, arg):
         return 0
     return 1 + my_log(arg / base, base)
 
-
-#
 # Helper functions
-#
 
 
 # Generate a unique 4-byte id for a circuit
@@ -158,7 +155,8 @@ def extend(circuit, node_router):
     shared_X__y = raise_exponent(public_Y, private_x)  # your-code-here#
     shared_X__b = raise_exponent(public_B, private_x)  # your-code-here#
     # not sure if protoid is right there (look at 5.1.4)
-    secret_input = shared_X__y | shared_X__b | node_ID | public_B | public_X | public_Y | key_agreement.protoid  # your-code-here#
+    secret_input = shared_X__y | shared_X__b | node_ID | public_B | public_X | public_Y | key_agreement.protoid
+    # your-code-here#
 
     # Complete the remaining hashing, verification - for further reference, read section 5.1.4 and 5.2.2.
     shared_secret = node_extended.complete_handshake(secret_input, public_Y, auth_digest)
@@ -184,9 +182,12 @@ def circuit_build_hops(circuit, middle_router, exit_router):
 # Create a circuit by establishing a shared secret with a first node
 def circuit_from_guard(guard_router, circuit_id):
     logger.debug('[TorInfo] Create new base circuit from %s', guard_router.nickname)
-
+    print("\nguard\n")
     guard = TorGuard(guard_router, purpose='TorClient')
+    print("\nusing id to create cirucit with guard node before extension\n")
     circuit = TorCircuit(circuit_id, guard)
+    print("\ncircuit node\n")
+    # not sure if guard or guard-router or ciurcuit for fitst argument
     circuit_node = CircuitNode(guard_router, key_agreement_cls=FastKeyAgreement)
 
     # We need to build a CREATE cell containing random digest (X) and the new circuit ID.
@@ -195,9 +196,9 @@ def circuit_from_guard(guard_router, circuit_id):
 
     # create random digest of len 20 bytes
     x = random_bytes(20)  # your-code-here#
-
-    cell_create = build_create_cell(x, gen_circuit_id())  # your-code-here#
-
+    print("\ncell create\n")
+    cell_create = build_create_cell(x, circuit_id)  # your-code-here#
+    print("\ncell created\n")
     cell_created = send_receive_cell_create(cell_create, circuit, circuit_node)  # your-code-here#
 
     # Extract the two parts from the received CREATED cell
@@ -205,16 +206,22 @@ def circuit_from_guard(guard_router, circuit_id):
     key_hash = cell_created.handshake_data[TOR_DIGEST_LEN:]  # Derivative key data
 
     # Please reference 5.1.5 and 5.2.1 of the Tor protocol specification for how to compute K_0 before hashing.
-    k0 = x | y  # your-code-here#
-
+    x_or_y = int.from_bytes(x, byteorder="big") | int.from_bytes(y, byteorder="big")
+    k0 = x_or_y.to_bytes(max(len(x), len(y)), byteorder="big")  # your-code-here#
+    print("\nkdf tor\n")
     k = kdf_tor(k0)
 
     computed_auth, shared_secret = k
 
     # Compare values to verify that the node received X correctly.
+    print(x)
+    print(y)
+    print(k0)
+    print(computed_auth)
+    print(key_hash)
     if computed_auth != key_hash:
         raise KeyAgreementError('Auth input does not match.')
-
+    print("\nnode shared secret\n")
     circuit_node.store_key(shared_secret)
 
     return circuit
@@ -230,30 +237,41 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     all_relays = get_all_relays(consensus)
     all_exits = get_all_exits(consensus)
     if guard_address is None:
-        guard_address = random_router(all_relays).ip
-        middle_address = random_router(all_relays).ip
+        router = random_router(all_relays)
+        guard_address = str(router.ip) + ":" + str(router.dir_port)
+        router = random_router(all_relays)
+        middle_address = str(router.ip) + ":" + str(router.dir_port)
         while middle_address == guard_address:
-            middle_address = random_router(all_relays).ip
-        exit_address = random_router(all_exits).ip
+            router = random_router(all_relays)
+            middle_address = str(router.ip) + ":" + str(router.dir_port)
+        router = random_router(all_exits)
+        exit_address = str(router.ip) + ":" + str(router.dir_port)
         while middle_address == exit_address or guard_address == exit_address:
-            middle_address = random_router(all_exits).ip
+            router = random_router(all_exits)
+            exit_address = str(router.ip) + ":" + str(router.dir_port)
     # your-code-here#
-
-    circuit_base = circuit_from_guard(guard_address, gen_circuit_id())  # your-code-here#  # CREATE
-
-    circuit = circuit_build_hops(circuit_base, middle_address, exit_address)  # your-code-here#  # EXTEND
+    print("\ncircuit base\n")
+    circuit_base = circuit_from_guard(router_from_ip(guard_address, consensus), gen_circuit_id())  # your-code-here#  # CREATE
+    print("\ncircuit\n")
+    circuit = circuit_build_hops(circuit_base,
+                                 router_from_ip(middle_address, consensus),
+                                 router_from_ip(exit_address, consensus)
+                                 )  # your-code-here#  # EXTEND
 
     # Use our established circuit to attach a TCP stream
     port = port or 80
+    print("\nstream\n")
     stream = new_tcp_stream(circuit, hostname, port)  # your-code-here#  # BEGIN
 
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
     request = hostname + ":" + str(port) + "/" + path  # your-code-here#
     logger.warning('Sending: %s %s:%s', request, hostname, port)
     # your-code-here#
+    print("\nrequest\n")
     stream.send(bytes(request))
 
     logger.debug('Reading...')
+    print("\nreceive\n")
     recv = stream.recv(1024)  # your-code-here#
 
     return recv.decode('utf-8')
