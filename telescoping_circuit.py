@@ -155,7 +155,7 @@ def extend(circuit, node_router):
     shared_X__y = raise_exponent(public_Y, private_x)  # your-code-here#
     shared_X__b = raise_exponent(public_B, private_x)  # your-code-here#
     # not sure if protoid is right there (look at 5.1.4)
-    secret_input = b"".join([shared_X__y, shared_X__b, node_ID, public_B, public_X, public_Y, key_agreement.protoid]) # your-code-here#
+    secret_input = b"".join([shared_X__y, shared_X__b]) # your-code-here#
 
     # Complete the remaining hashing, verification - for further reference, read section 5.1.4 and 5.2.2.
     shared_secret = node_extended.complete_handshake(secret_input, public_Y, auth_digest)
