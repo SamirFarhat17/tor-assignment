@@ -17,15 +17,7 @@ from dependency.torpy.utils import register_logger
 from dependency.torpy.circuit import random, TorCircuit, CircuitNode, NtorKeyAgreement
 from dependency.torpy.documents.network_status import RouterFlags
 
-
-def my_log(base, arg):
-    if arg < base:
-        return 0
-    return 1 + my_log(arg / base, base)
-
 # Helper functions
-
-
 # Generate a unique 4-byte id for a circuit
 CIRCUIT_ID = random.randrange(0, 0xFFFFFFFF)
 
@@ -67,6 +59,7 @@ def router_from_ip(ip, consensus):
 # Create a TCP layer within Tor pointed to some external end-point
 # This stream can .send(b'...') a cell as bytes, and .recv(1024) a cell back.
 def new_tcp_stream(circuit, hostname, port):
+    print(circuit.id)
     return circuit.create_stream((hostname, port))
 
 
@@ -108,10 +101,10 @@ def random_bytes(count):
 # Your implementation
 #
 
-# Adds an additional relay hop to a circuit object
+# Adds a relay hop to a circuit object
 def extend(circuit, node_router):
     """
-    Section 5.3 - Send CellExtend to extend circuit Circuit.
+    Section 5.3 - Send CellExtend to extend circuit (Circuit).
 
     To extend the circuit by a single onion router R_M, the OP performs these steps:
         1. Create an onion skin, encrypted to R_M's public onion key.
@@ -155,7 +148,7 @@ def extend(circuit, node_router):
     shared_X__y = raise_exponent(public_Y, private_x)  # your-code-here#
     shared_X__b = raise_exponent(public_B, private_x)  # your-code-here#
     # not sure if protoid is right there (look at 5.1.4)
-    secret_input = b"".join([shared_X__y, shared_X__b]) # your-code-here#
+    secret_input = b"".join([shared_X__y, shared_X__b])  # your-code-here#
 
     # Complete the remaining hashing, verification - for further reference, read section 5.1.4 and 5.2.2.
     shared_secret = node_extended.complete_handshake(secret_input, public_Y, auth_digest)
@@ -168,7 +161,6 @@ def extend(circuit, node_router):
 # Takes a circuit object containing only a guard, and extends it to contain both a middle and an exit
 def circuit_build_hops(circuit, middle_router, exit_router):
     logger.info('Building 3 hops circuit...')
-
     # your-code-here#
     extend(circuit, middle_router)
     extend(circuit, exit_router)
@@ -233,27 +225,25 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
         while middle_address == exit_address or guard_address == exit_address:
             router = random_router(all_exits)
             exit_address = str(router.ip) + ":" + str(router.dir_port)
+
     # your-code-here#
-    print("\ncircuit base\n")
     circ_id = gen_circuit_id()
     circuit_base = circuit_from_guard(router_from_ip(guard_address, consensus), circ_id)  # your-code-here#  # CREATE
-    print("\ncircuit\n")
-    circuit = circuit_build_hops(circuit_base,
-                                 router_from_ip(middle_address, consensus),
-                                 router_from_ip(exit_address, consensus)
-                                 )  # your-code-here#  # EXTEND
+    circuit = circuit_build_hops(
+        circuit_base,
+        router_from_ip(middle_address, consensus),
+        router_from_ip(exit_address, consensus)
+    )  # your-code-here#  # EXTEND
 
     # Use our established circuit to attach a TCP stream
     port = port or 80
-    print("\nstream\n")
     stream = new_tcp_stream(circuit, hostname, port)  # your-code-here#  # BEGIN
-
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
-    request = hostname + ":" + str(port) + "/" + path + "\r\n" # your-code-here#
+    # request = hostname + ":" + str(port) + "/" + path
+    request = b'GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, hostname)  # your-code-here#
     logger.warning('Sending: %s %s:%s', request, hostname, port)
     # your-code-here#
-    print("\nrequest\n")
-    stream.send(bytes(request))
+    stream.send(request)
 
     logger.debug('Reading...')
     print("\nreceive\n")
