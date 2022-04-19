@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from argparse import ArgumentParser
 from urllib.parse import urlparse
@@ -209,6 +210,7 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     # and establish a layered connection between them. This is
     # the Tor circuit that will be used to request a web page.
     consensus = tor.consensus
+
     all_relays = get_all_relays(consensus)
     all_exits = get_all_exits(consensus)
     if guard_address is None:
@@ -236,17 +238,17 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
 
     # Use our established circuit to attach a TCP stream
     port = port or 80
+
     stream = new_tcp_stream(circuit, hostname, port)  # your-code-here#  # BEGIN
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
     # request = hostname + ":" + str(port) + "/" + path
-    request = b'GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n' % (path.encode(), hostname.encode())  # your-code-here#
+    request = b'GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path.encode(), hostname.encode())  # your-code-here#
     logger.warning('Sending: %s %s:%s', request, hostname, port)
     # your-code-here#
-
     stream.send(request)
-    print("reading")
     logger.debug('Reading...')
     recv = stream.recv(2048)  # your-code-here#
+    stream.close()
     return recv.decode('utf-8')
 
 
@@ -268,7 +270,7 @@ def main():
         middle_address=args.middle,
         exit_address=args.exit
     )
-
+    print("done with get")
     # Write response to args.outfile or stdout
     if args.outfile == "":
         print('response', response)
@@ -276,6 +278,8 @@ def main():
         outfile = open(args.outfile, "w")
         outfile.write(response)
         outfile.close()
+        print("file closed")
+
 
 
 if __name__ == '__main__':
