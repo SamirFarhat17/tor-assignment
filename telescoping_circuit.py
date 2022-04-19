@@ -59,7 +59,6 @@ def router_from_ip(ip, consensus):
 # Create a TCP layer within Tor pointed to some external end-point
 # This stream can .send(b'...') a cell as bytes, and .recv(1024) a cell back.
 def new_tcp_stream(circuit, hostname, port):
-    print(circuit.id)
     return circuit.create_stream((hostname, port))
 
 
@@ -240,15 +239,14 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     stream = new_tcp_stream(circuit, hostname, port)  # your-code-here#  # BEGIN
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
     # request = hostname + ":" + str(port) + "/" + path
-    request = b'GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path, hostname)  # your-code-here#
+    request = b'GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n' % (path.encode(), hostname.encode())  # your-code-here#
     logger.warning('Sending: %s %s:%s', request, hostname, port)
     # your-code-here#
+
     stream.send(request)
-
+    print("reading")
     logger.debug('Reading...')
-    print("\nreceive\n")
-    recv = stream.recv(1024)  # your-code-here#
-
+    recv = stream.recv(2048)  # your-code-here#
     return recv.decode('utf-8')
 
 
