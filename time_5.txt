@@ -1,1 +1,1 @@
-Time for run is 1.1129517555236816
+Time for run is 2.841575860977173
