@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-
+import time
 from argparse import ArgumentParser
 from urllib.parse import urlparse
 
@@ -14,7 +14,7 @@ from dependency.torpy.crypto import TOR_DIGEST_LEN, kdf_tor
 from dependency.torpy.crypto_common import dh_shared, dh_public_from_bytes, hkdf_sha256, curve25519_get_shared
 from dependency.torpy.guard import TorGuard
 from dependency.torpy.keyagreement import FastKeyAgreement, KeyAgreement, KeyAgreementError
-from dependency.torpy.utils import register_logger
+from dependency.torpy.utils import register_logger, recv_all
 from dependency.torpy.circuit import random, TorCircuit, CircuitNode, NtorKeyAgreement
 from dependency.torpy.documents.network_status import RouterFlags
 
@@ -205,7 +205,7 @@ def circuit_from_guard(guard_router, circuit_id):
 
 # Initiates the construction of a circuit and then gets a web page through that circuit
 def get(hostname, port, path="", guard_address=None, middle_address=None, exit_address=None):
-    tor = TorClient()
+    tor = TorClient(use_local_directories=True)
     # - Your code here - Pick nodes to form your circuit, an ID,
     # and establish a layered connection between them. This is
     # the Tor circuit that will be used to request a web page.
@@ -239,7 +239,7 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     # Use our established circuit to attach a TCP stream
     port = port or 80
 
-    stream = new_tcp_stream(circuit, hostname, port)  # your-code-here#  # BEGIN
+    stream = new_tcp_stream(circuit_base, hostname, port)  # your-code-here#  # BEGIN
     # Make an HTTP GET request to the web page at <hostname>:<port>/<path>
     # request = hostname + ":" + str(port) + "/" + path
     request = b'GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n' % (path.encode(), hostname.encode())  # your-code-here#
@@ -247,7 +247,7 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     # your-code-here#
     stream.send(request)
     logger.debug('Reading...')
-    recv = stream.recv(2048)  # your-code-here#
+    recv = recv_all(stream)  # your-code-here#
     stream.close()
     return recv.decode('utf-8')
 
@@ -262,7 +262,7 @@ def main():
     parser.add_argument('--outfile', default="", type=str, help='output file path')
     args = parser.parse_args()
     url = urlparse(args.url)
-
+    start = time.time()
     response = get(
         hostname=url.hostname,
         port=url.port, path=url.path,
@@ -270,7 +270,8 @@ def main():
         middle_address=args.middle,
         exit_address=args.exit
     )
-    print("done with get")
+    end = time.time()
+
     # Write response to args.outfile or stdout
     if args.outfile == "":
         print('response', response)
@@ -278,7 +279,7 @@ def main():
         outfile = open(args.outfile, "w")
         outfile.write(response)
         outfile.close()
-        print("file closed")
+        print(f"Time for run is {end - start}")
 
 
 

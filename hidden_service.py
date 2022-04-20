@@ -93,8 +93,13 @@ def random_bytes(count):
 #
 
 # Send a RELAY_COMMAND_INTRODUCE1 (client's point of view) cell
-def set_up_intro_point(base_circuit, introduction_point_router, rendezvous_point_router, hidden_service,
-                       rendezvous_cookie):
+def set_up_intro_point(
+        base_circuit,
+        introduction_point_router,
+        rendezvous_point_router,
+        hidden_service,
+        rendezvous_cookie
+):
     def cb(response, intro_circuit):
         # We have a new `intro_circuit` for accessing the introduction point (2 nodes; guard and introduction point)
         original_circuit = base_circuit  # The original circuit of which to add the rendezvous point (3 nodes now, will soon be 4)
@@ -123,6 +128,7 @@ def set_up_intro_point(base_circuit, introduction_point_router, rendezvous_point
 
         # Send (INTRODUCE1) CellRelayIntroduce1 cell and expect a CellRelayIntroduceAck cell response
         # Section 1.8+ in the Tor Rendezvous Specification (the v3 intro protocol)
+        print("\nintroduce_cell\n")
         introduce_cell = CellRelayIntroduce1(
             introduction_point_router,
             X_bytes,
@@ -137,11 +143,12 @@ def set_up_intro_point(base_circuit, introduction_point_router, rendezvous_point
             # your-code-here#
             intro_circuit.id
         )
-        cell_acknowledgement = send_relay_cell(intro_circuit, introduce_cell, response.type)  # your-code-here#
+        print("\ncell_ack\n")
+        cell_acknowledgement = send_relay_cell(intro_circuit, introduce_cell, CellRelayIntroduceAck)  # your-code-here#
         logger.info('Introduced (%r)', cell_acknowledgement)
 
         rendezvous2_cell = response.get()
-
+        print("\ngot response\n")
         handshake_response = rendezvous2_cell.handshake_data
         auth = handshake_response[128:]  # Derivative key data (as in Sections 5.1.3 and 5.2)
         Y_bytes = handshake_response[:128]  # Client's public key, g^y = Y, in bytes
@@ -162,7 +169,7 @@ def set_up_intro_point(base_circuit, introduction_point_router, rendezvous_point
         shared_secret_key = key_material[:KeyAgreement.KEY_MATERIAL_LENGTH]  # Cut unused bytes
 
         introduction_point.store_key(shared_secret_key)
-
+        print("\nreturn intro point\n")
         return introduction_point
 
     return IntroductionPoint(introduction_point_router, base_circuit).connect(hidden_service, rendezvous_cookie,
@@ -176,25 +183,26 @@ def extend_to_hidden(circuit, hidden_service):
     # Section 1.7 in the Tor Rendezvous Specification
     # Send CellRelayEstablishRendezvous and expect CellRelayRendezvousEstablished
     rendezvous_cookie = random_bytes(20)  # your-code-here#
+    # what's going on here
     establish_cell = CellRelayEstablishRendezvous(rendezvous_cookie, circuit.id)  # your-code-here#
-    cell_established = CellRelayRendezvousEstablished(establish_cell)  # your-code-here#
+    cell_established = send_relay_cell(circuit, establish_cell, CellRelayRendezvousEstablished)  # your-code-here#
     logger.info('Rendezvous established (%r)', cell_established)
 
     # Pick a hidden service directory to look up possible introduction point
     hs_directory_generator = get_directories(circuit, hidden_service)  # your-code-here#
     # confused on this
-    hs_directory = hs_directory_generator.get_introductions()  # your-code-here#
+    hs_directory = next(hs_directory_generator)  # your-code-here#
 
     # Pick an introduction point (router object) to the hidden service
     introduction_router_generator = get_introduction_routers(hs_directory, hidden_service)  # your-code-here#
     # confused on this
-    introduction_point_router = random_router(introduction_router_generator)  # your-code-here#
+    introduction_point_router = next(introduction_router_generator)  # your-code-here#
 
     # And then also pick a rendezvous point of which to proceed with server requests/communications
     convenient_rendezvous_points = circuit.get_circuit_nodes()
     # not sure
     rendezvous_point_router = random_router(convenient_rendezvous_points)  # your-code-here#
-
+    print("\nintroduction_point\n")
     # Set up an introduction point for the hidden service
     introduction_point = set_up_intro_point(
         circuit,
@@ -206,6 +214,7 @@ def extend_to_hidden(circuit, hidden_service):
 
     # Add the introduction point as the next hop in the circuit
     circuit.circuit_nodes.append(introduction_point)
+    print("\nappended\n")
 
 
 def get(hs_name, port=80, path="", live=False):
@@ -230,7 +239,7 @@ def get(hs_name, port=80, path="", live=False):
         logger.info('Stream #%i: connecting to %r', tor_stream.id, address)
         # your-code-here#
         connect_tor_stream(tor_stream, address)
-
+        print("\ntor stream connected\n")
         with tor_stream as stream:
             # Send a GET request through the Tor stream
             # as if it were an ordinary HTTP connection.

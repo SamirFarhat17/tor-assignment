@@ -1,0 +1,8 @@
+HTTP/1.0 200 OK
+Server: SimpleHTTP/0.6 Python/3.6.9
+Date: Wed, 20 Apr 2022 13:56:52 GMT
+Content-type: text/html
+Content-Length: 22
+Last-Modified: Wed, 06 Apr 2022 04:01:55 GMT
+
+<h1>Hello CS 558</h1>

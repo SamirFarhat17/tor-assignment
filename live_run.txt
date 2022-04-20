@@ -1,13 +1,12 @@
 HTTP/1.0 200 OK
-Accept-Ranges: bytes
-Age: 414533
+Age: 470632
 Cache-Control: max-age=604800
 Content-Type: text/html; charset=UTF-8
-Date: Wed, 20 Apr 2022 03:42:07 GMT
-Etag: "3147526947"
-Expires: Wed, 27 Apr 2022 03:42:07 GMT
+Date: Wed, 20 Apr 2022 14:09:34 GMT
+Etag: "3147526947+ident"
+Expires: Wed, 27 Apr 2022 14:09:34 GMT
 Last-Modified: Thu, 17 Oct 2019 07:18:26 GMT
-Server: ECS (bsa/EB19)
+Server: ECS (bsa/EB24)
 Vary: Accept-Encoding
 X-Cache: HIT
 Content-Length: 1256
