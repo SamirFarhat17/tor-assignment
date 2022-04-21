@@ -247,6 +247,9 @@ def get(hs_name, port=80, path="", live=False):
             recv = b""
             while stream.state == StreamState.Connected:
                 recv = recv + stream.recv(1024)
+            circuit.close()
+            stream.close()
+            tor.close()
             return recv.decode('utf-8')
 
 
