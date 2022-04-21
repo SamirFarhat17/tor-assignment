@@ -250,7 +250,9 @@ def get(hostname, port, path="", guard_address=None, middle_address=None, exit_a
     stream.send(request)
     logger.debug('Reading...')
     recv = recv_all(stream)  # your-code-here#
+    circuit_base._guard.close()
     stream.close()
+    tor.close()
     return recv.decode('utf-8')
 
 
