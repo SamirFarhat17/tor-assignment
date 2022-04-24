@@ -283,7 +283,7 @@ def main():
         outfile = open(args.outfile, "w")
         outfile.write(response)
         outfile.close()
-        print(f"Time for run is {end - start}")
+        # print(f"Time for run is {end - start}")
 
 
 

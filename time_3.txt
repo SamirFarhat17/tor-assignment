@@ -1,1 +1,3 @@
-Time for run is 5.931066036224365
+real	0m7.085s
+user	0m0.791s
+sys	0m0.186s
